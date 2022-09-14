@@ -3,10 +3,21 @@ import os
 import time
 import math
 from PIL import Image, ImageDraw, ImageFont
+import argparse
 
 required_screens = 9
 video_dir = 'Videos/'
 screen_size = (900, 900)
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-d', help='Directory of files to create thumbs of', type=str, nargs='?', const=True, default='')
+parser.add_argument('-f', help='Single file to screencap', type=str, nargs='?', const=True, default='')
+args = parser.parse_args()
+folder = args.d
+file = args.f
+
+if not file and not folder:
+    raise Exception('You need to define a file or dir')
 
 
 def get_video_length(video):
@@ -76,11 +87,11 @@ def generate_screen(images, filename):
     img.save(filename, quality=95)
 
 
-def run():
-    columns = math.floor(math.sqrt(required_screens))
-    rows = math.ceil(math.sqrt(required_screens))
-
-    video_files = get_video_files(video_dir)
+def run(d=None, f=None):
+    if d:
+        video_files = get_video_files(d)
+    elif f:
+        video_files = [f]
 
     for vid in video_files:
         print('Processing ' + vid + '...')
@@ -94,4 +105,4 @@ def run():
         cam.release()
 
 
-run()
+run(folder, file)

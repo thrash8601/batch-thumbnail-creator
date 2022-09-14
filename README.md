@@ -3,3 +3,4 @@
 ## Requirements
 - `opencv-python`
 - `PILLOW`
+- `pymediainfo`

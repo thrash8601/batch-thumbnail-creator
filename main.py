@@ -1,9 +1,9 @@
 import cv2
 import os
-import time
 import math
 from PIL import Image, ImageDraw, ImageFont
 import argparse
+from pymediainfo import MediaInfo
 
 required_screens = 9
 video_dir = 'Videos/'
@@ -78,13 +78,80 @@ def get_position(arr_index):
         return 2, 2
 
 
-def generate_screen(images, filename):
-    img = Image.new(mode="RGB", size=screen_size)
+def get_file_size(file_dir):
+    file_stats = os.stat(file_dir)
+    b_count = file_stats.st_size
+    if b_count > (1024 * 1024 * 1024 * 1024):
+        return str(round(b_count / (1024 * 1024 * 1024 * 1024), 2)) + 'tb'
+    if b_count > (1024 * 1024 * 1024):
+        return str(round(b_count / (1024 * 1024 * 1024), 2)) + 'gb'
+    if b_count > (1024 * 1024):
+        return str(round(b_count / (1024 * 1024), 2)) + 'mb'
+    if b_count > 1024:
+        return str(round(b_count / 1024, 2)) + 'kb'
+
+
+def get_number_as_2_places(num):
+    if num < 10:
+        return '0' + str(num)
+    return str(num)
+
+
+def get_duration(full_duration):
+    secs = full_duration / 1000
+    hours = secs / 3600
+    minutes = (hours % 1) * 60
+    secs = (minutes % 1) * 60
+
+    hours = get_number_as_2_places(math.floor(hours))
+    minutes = get_number_as_2_places(math.floor(minutes))
+    secs = get_number_as_2_places(math.floor(secs))
+
+    duration = f'{hours}:{minutes}:{secs}'
+    return duration
+
+
+def get_media_info(file_dir):
+    media_info = MediaInfo.parse(file_dir)
+    vid_track = media_info.video_tracks[0]
+    ret = {}
+    ret['filename'] = file_dir.split('/')[-1]
+    ret['size'] = get_file_size(file_dir)
+    ret['bitrate'] = vid_track.other_bit_rate[0]
+    ret['duration'] = get_duration(vid_track.duration)
+    ret['framerate'] = vid_track.frame_rate
+    ret['resolution'] = str(vid_track.width) + ' / ' + str(vid_track.height)
+    return ret
+
+
+def generate_file_info(vid):
+    img = Image.new("RGB", (1100, 150), (255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    font_size = 16
+    font = ImageFont.truetype("Roboto-Regular.ttf", font_size)
+    header = ImageFont.truetype("Roboto-Bold.ttf", 20)
+    gap = 5
+    info = get_media_info(vid)
+    draw.text((0, 0), f"{info['filename']}", (0, 0, 0), font=header)
+    draw.text((0, 20 + gap + font_size), f"Size: {info['size']}", (0, 0, 0), font=font)
+    draw.text((0, 20 + gap * 2 + font_size * 2), f"Bitrate: {info['bitrate']}", (0, 0, 0), font=font)
+    draw.text((0, 20 + gap * 3 + font_size * 3), f"Framerate: {info['framerate']}", (0, 0, 0), font=font)
+    draw.text((0, 20 + gap * 4 + font_size * 4), f"Resolution: {info['resolution']}", (0, 0, 0), font=font)
+    draw.text((0, 20 + gap * 5 + font_size * 5), f"Duration: {info['duration']}", (0, 0, 0), font=font)
+    return img
+
+
+def generate_screen(images, filename, video_file_name):
+    img = Image.new(mode="RGB", size=(1000, 1200), color=(255, 255, 255))
+    info = generate_file_info(video_file_name)
+    img.paste(info, (50, 50))
+    screens = Image.new(mode="RGB", size=screen_size, color=(255, 255, 255))
     for f in images:
         i = images.index(f)
         col, row = get_position(i)
         f.thumbnail((300, 300))
-        img.paste(f, (col * 300, row * 300))
+        screens.paste(f, (col * 300, row * 300))
+    img.paste(screens, (50, 250))
     img.save(filename, quality=95)
 
 
@@ -102,7 +169,7 @@ def run(d=None, f=None):
         fc, dur = get_video_length(cam)
         frame_distance = fc / required_screens
         images = generate_thumbs(cam, frame_distance)
-        generate_screen(images, img_file)
+        generate_screen(images, img_file, vid)
         cam.release()
 
 

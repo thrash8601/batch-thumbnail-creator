@@ -4,6 +4,10 @@ import time
 import math
 from PIL import Image, ImageDraw, ImageFont
 
+required_screens = 9
+video_dir = 'Videos/'
+screen_size = (900, 900)
+
 
 def get_video_length(video):
     frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
@@ -16,41 +20,29 @@ if not os.path.exists('.tmp'):
     os.mkdir('.tmp')
 
 
-required_screens = 9
-video_file = 'test2.mp4'
-cam = cv2.VideoCapture(video_file)
-img_file = 'thumbs/' + video_file + '.jpg'
-fc, dur = get_video_length(cam)
-frame_distance = fc / required_screens
+def get_video_files(files_dir):
+    files = os.listdir(files_dir)
+    ret = []
+    for file in files:
+        f, ext = os.path.splitext(file)
+        if ext == '.mp4':
+            ret.append(files_dir + file)
+    return ret
 
-screen_size = (900, 900)
 
-print('frame count: ' + str(fc))
-print('duration: ' + str(dur))
-
-images = []
-
-for i in range(0, required_screens):
-    frame_no = int(i * frame_distance)
-    cam.set(1, frame_no)
-    ret, frame = cam.read()
-    name = './.tmp/frame' + str(i) + '.jpg'
-    if ret:
-        print('Creating...' + name)
-        cv2.imwrite(name, frame)
-        images.append(Image.open(name))
-    else:
-        print('Error capturing ' + name)
-
-cam.release()
-cv2.destroyAllWindows()
-
-img = Image.new(mode="RGB", size=screen_size)
-
-columns = math.floor(math.sqrt(required_screens))
-rows = math.ceil(math.sqrt(required_screens))
-print('cols: ' + str(columns))
-print('rows: ' + str(rows))
+def generate_thumbs(video, frame_distance):
+    thumbs_arr = []
+    for i in range(0, required_screens):
+        frame_no = int(i * frame_distance)
+        video.set(1, frame_no)
+        ret, frame = video.read()
+        name = './.tmp/frame' + str(i) + '.jpg'
+        if ret:
+            cv2.imwrite(name, frame)
+            thumbs_arr.append(Image.open(name))
+        else:
+            print('Error capturing ' + name)
+    return thumbs_arr
 
 
 def get_position(arr_index):
@@ -74,10 +66,32 @@ def get_position(arr_index):
         return 2, 2
 
 
-for f in images:
-    i = images.index(f)
-    col, row = get_position(i)
-    f.thumbnail((300, 300))
-    img.paste(f, (col * 300, row * 300))
+def generate_screen(images, filename):
+    img = Image.new(mode="RGB", size=screen_size)
+    for f in images:
+        i = images.index(f)
+        col, row = get_position(i)
+        f.thumbnail((300, 300))
+        img.paste(f, (col * 300, row * 300))
+    img.save(filename, quality=95)
 
-img.save(img_file, quality=95)
+
+def run():
+    columns = math.floor(math.sqrt(required_screens))
+    rows = math.ceil(math.sqrt(required_screens))
+
+    video_files = get_video_files(video_dir)
+
+    for vid in video_files:
+        print('Processing ' + vid + '...')
+        cam = cv2.VideoCapture(vid)
+        filename = vid.split('/')[-1]
+        img_file = 'thumbs/' + filename + '.jpg'
+        fc, dur = get_video_length(cam)
+        frame_distance = fc / required_screens
+        images = generate_thumbs(cam, frame_distance)
+        generate_screen(images, img_file)
+        cam.release()
+
+
+run()

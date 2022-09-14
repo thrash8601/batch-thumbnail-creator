@@ -10,6 +10,7 @@ video_dir = 'Videos/'
 screen_size = (900, 900)
 
 parser = argparse.ArgumentParser()
+# Right now -d needs to be the "Videos" dir in the current dir, as hardlinks seem to break opencv
 parser.add_argument('-d', help='Directory of files to create thumbs of', type=str, nargs='?', const=True, default='')
 parser.add_argument('-f', help='Single file to screencap', type=str, nargs='?', const=True, default='')
 args = parser.parse_args()
@@ -94,9 +95,9 @@ def run(d=None, f=None):
         video_files = [f]
 
     for vid in video_files:
-        print('Processing ' + vid + '...')
         cam = cv2.VideoCapture(vid)
         filename = vid.split('/')[-1]
+        print('Processing ' + filename + '...')
         img_file = 'thumbs/' + filename + '.jpg'
         fc, dur = get_video_length(cam)
         frame_distance = fc / required_screens

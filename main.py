@@ -21,6 +21,14 @@ if not file and not folder:
     raise Exception('You need to define a file or dir')
 
 
+def is_video_file(file_dir):
+    file_info = MediaInfo.parse(file_dir)
+    for track in file_info.tracks:
+        if track.track_type == "Video":
+            return True
+    return False
+
+
 def get_video_length(video):
     frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
     frame_per_second = video.get(cv2.CAP_PROP_FPS)
@@ -36,8 +44,7 @@ def get_video_files(files_dir):
     files = os.listdir(files_dir)
     ret = []
     for file in files:
-        f, ext = os.path.splitext(file)
-        if ext == '.mp4':
+        if is_video_file(files_dir + file):
             ret.append(files_dir + file)
     return ret
 
